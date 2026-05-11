@@ -1,20 +1,33 @@
 # Stock Price Prediction System using ML
 
-Full-stack stock prediction app with:
-- **Backend**: FastAPI + scikit-learn + XGBoost + yfinance + ta
-- **Frontend**: React (Vite) + Tailwind CSS + Recharts
+Modern full-stack stock analytics and prediction dashboard using real Yahoo Finance data.
 
-The system trains 8 real ML models on historical market data and provides:
-- Next-day closing price prediction (regression)
-- Next-day trend prediction (classification)
-- Model comparison metrics
-- Interactive charts and indicator panels
+## Preview
+
+Current dashboard preview:
+
+![Stock Price Prediction Dashboard Preview](frontend/src/Images/image.png)
+
+## Features
+
+- Real OHLCV market data from `yfinance` (no mock data)
+- Technical indicators with `ta`: RSI, MACD, Bollinger Bands, SMA/EMA, returns, and lag features
+- 8 ML models (4 regression + 4 classification) trained on time-ordered splits
+- Best model persistence via `joblib`
+- FastAPI backend with training, prediction, history, and ticker APIs
+- Responsive React UI with dark theme, charts, indicators, and model comparison table
+
+## Tech Stack
+
+- **Backend**: FastAPI, scikit-learn, XGBoost, pandas, numpy, yfinance, ta, joblib
+- **Frontend**: React + Vite, Tailwind CSS, Axios, Recharts
 
 ## Project Structure
 
 ```text
 backend/
   main.py
+  cache/
   data/
     fetcher.py
     features.py
@@ -23,33 +36,45 @@ backend/
     classification.py
   saved_models/
 frontend/
+  .env.example
   src/
     App.jsx
     api/client.js
     components/
+    Images/
+      image.png
+scripts/
+  setup_backend.sh
+  run_backend.sh
+  run_frontend.sh
+  run_all.sh
+requirements.txt
+README.md
 ```
 
-## Backend Setup
+## Quick Start
 
-1. Create and activate a Python virtual environment.
-2. Install dependencies from the **repository root** (where `requirements.txt` is):
+### Quick Start (One Click)
+- Windows: Double-click `start.bat` (opens backend + frontend in separate terminal windows)
+- Mac/Linux: Run `chmod +x start.sh && ./start.sh`
+- PowerShell: Right-click `start.ps1` and choose **Run with PowerShell**
 
-```bash
-pip install -r requirements.txt
-```
+Windows note:
+- `start.bat` uses an absolute `ROOT` path. If you move this project folder, update the `SET ROOT=...` line in `start.bat`.
 
-On Windows, if `pip` is not on your PATH, use:
+### Quick Start (Manual)
+
+### 1) Backend
+
+From repository root:
 
 ```bash
 python -m pip install -r requirements.txt
-```
-
-3. Run backend:
-
-```bash
 cd backend
 uvicorn main:app --reload
 ```
+
+Backend: `http://127.0.0.1:8000`
 
 If port 8000 is already in use:
 
@@ -57,65 +82,139 @@ If port 8000 is already in use:
 uvicorn main:app --reload --port 8001
 ```
 
-Backend defaults to `http://127.0.0.1:8000`. If you use another port, set the frontend URL (see below).
+### 2) Frontend
 
-## Frontend Setup
-
-1. Install frontend dependencies:
+In another terminal:
 
 ```bash
 cd frontend
 npm install
-```
-
-2. Run frontend:
-
-```bash
 npm run dev
 ```
 
-Frontend will run at `http://localhost:5173`.
+Frontend: `http://localhost:5173`
 
-### Pointing the frontend at a different API URL
+## Quick Start (Bash Scripts)
 
-Copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_BASE_URL` (include the `/api` suffix), for example:
+Use these from project root:
+
+```bash
+chmod +x scripts/*.sh
+./scripts/setup_backend.sh
+./scripts/run_backend.sh
+```
+
+For frontend:
+
+```bash
+./scripts/run_frontend.sh
+```
+
+To run both:
+
+```bash
+./scripts/run_all.sh
+```
+
+## Environment Configuration
+
+If backend runs on a custom port, configure frontend API URL:
+
+1. Copy `frontend/.env.example` to `frontend/.env`
+2. Set:
 
 ```bash
 VITE_API_BASE_URL=http://127.0.0.1:8001/api
 ```
 
-Restart `npm run dev` after changing `.env`.
+3. Restart frontend dev server.
 
-## API Endpoints
+## API Reference
 
-- `POST /api/train`
-  - Body: `{ "ticker": "AAPL", "start_date": "2019-01-01" }`
-  - Trains all regression and classification models, saves best models, returns metrics.
+### `GET /`
+Health route:
 
-- `POST /api/predict`
-  - Body: `{ "ticker": "AAPL" }`
-  - Returns predicted price, trend, confidence, and model names.
+```json
+{ "status": "ok", "message": "Stock API running" }
+```
 
-- `GET /api/history/{ticker}`
-  - Returns last 90 days OHLCV + computed indicators.
+### `GET /api/tickers`
+Returns:
 
-- `GET /api/tickers`
-  - Returns popular tickers list.
+```json
+["AAPL","TSLA","GOOGL","MSFT","AMZN","NFLX","META"]
+```
+
+### `POST /api/train`
+Request:
+
+```json
+{ "ticker": "AAPL", "start_date": "2019-01-01" }
+```
+
+Response includes metrics for all regression/classification models and best model names.
+
+### `POST /api/predict`
+Request:
+
+```json
+{ "ticker": "AAPL" }
+```
+
+Response:
+
+```json
+{
+  "predicted_price": 0.0,
+  "trend": "UP",
+  "confidence": 0.0,
+  "model_used": "ModelA + ModelB"
+}
+```
+
+### `GET /api/history/{ticker}`
+Returns latest 90 records with OHLCV + indicators.
+
+## Model Details
+
+### Regression Models
+- Linear Regression
+- Random Forest Regressor
+- XGBoost Regressor
+- SVR
+
+Metrics: MAE, RMSE, R²
+
+### Classification Models
+- Logistic Regression
+- Random Forest Classifier
+- XGBoost Classifier
+- KNN Classifier
+
+Metrics: Accuracy, Precision, Recall, F1
+
+## Validation and Error Handling
+
+- Empty/invalid ticker data returns clear API errors
+- Future `start_date` input is normalized server-side
+- Feature-engineering safety checks for short data windows
+- Prediction endpoint warns if models are not trained yet
 
 ## Sample Tickers
 
-Use any valid Yahoo Finance ticker, for example:
-- `AAPL`
-- `TSLA`
-- `GOOGL`
-- `MSFT`
-- `AMZN`
-- `NFLX`
-- `META`
-- `NVDA`
+`AAPL`, `TSLA`, `GOOGL`, `MSFT`, `AMZN`, `NFLX`, `META`, `NVDA`
 
-## Notes
+## Troubleshooting
 
-- Data is fetched from **yfinance** and cached in `backend/cache`.
-- If prediction is called before training, API returns a clear error.
-- Invalid tickers or missing market data are handled with readable API errors.
+- **`pip` not recognized (Windows)**:
+  - Use `python -m pip install -r requirements.txt`
+- **`git` not recognized**:
+  - Install Git and ensure it is added to PATH
+- **Port already in use**:
+  - Start backend with `--port 8001`
+- **Frontend cannot reach backend**:
+  - Verify `VITE_API_BASE_URL` and restart `npm run dev`
+
+## License
+
+For educational and demonstration purposes.
